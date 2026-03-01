@@ -14,7 +14,7 @@ type Message struct {
 	Content string `json:"content"`
 }
 
-// chatRequest is the JSON body sent to the OpenAI API.
+// chatRequest is the JSON body sent to the OpenAI Chat Completions endpoint.
 type chatRequest struct {
 	Model       string    `json:"model"`
 	Messages    []Message `json:"messages"`
@@ -25,12 +25,11 @@ type chatRequest struct {
 // chatResponse is the JSON body returned by the OpenAI API.
 type chatResponse struct {
 	Choices []struct {
-		Message      Message `json:"message"`
-		FinishReason string  `json:"finish_reason"`
+		Message Message `json:"message"`
 	} `json:"choices"`
 	Error *struct {
-		Message string `json:"message"`
 		Type    string `json:"type"`
+		Message string `json:"message"`
 	} `json:"error,omitempty"`
 }
 
@@ -40,7 +39,7 @@ type Client struct {
 	httpClient *http.Client
 }
 
-// NewClient creates an API client using the provided key.
+// NewClient creates an API client authenticated with the provided key.
 func NewClient(apiKey string) *Client {
 	return &Client{
 		apiKey:     apiKey,
@@ -48,23 +47,21 @@ func NewClient(apiKey string) *Client {
 	}
 }
 
-// Send sends the full conversation history to the API and returns the assistant's reply.
+// Send transmits the full conversation history and returns the assistant's reply.
 func (c *Client) Send(messages []Message) (string, error) {
-	body := chatRequest{
+	payload, err := json.Marshal(chatRequest{
 		Model:       DefaultModel,
 		Messages:    messages,
 		Temperature: DefaultTemperature,
 		MaxTokens:   DefaultMaxTokens,
-	}
-
-	payload, err := json.Marshal(body)
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to encode request: %w", err)
 	}
 
 	req, err := http.NewRequest(http.MethodPost, APIEndpoint, bytes.NewReader(payload))
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return "", fmt.Errorf("failed to build request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
@@ -79,15 +76,12 @@ func (c *Client) Send(messages []Message) (string, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", fmt.Errorf("failed to decode response: %w", err)
 	}
-
 	if result.Error != nil {
-		return "", fmt.Errorf("OpenAI error [%s]: %s", result.Error.Type, result.Error.Message)
+		return "", fmt.Errorf("OpenAI [%s]: %s", result.Error.Type, result.Error.Message)
 	}
-
 	if len(result.Choices) == 0 {
 		return "", fmt.Errorf("API returned no choices")
 	}
 
 	return strings.TrimSpace(result.Choices[0].Message.Content), nil
 }
-

@@ -3,17 +3,10 @@ package main
 import "time"
 
 const (
+	// --- API ---
+
 	// EnvAPIKey is the environment variable name for the OpenAI API key.
 	EnvAPIKey = "OPENAI_API_KEY"
-
-	// botIcon is the emoji displayed next to the bot name in the banner and messages.
-	botIcon = "🎬"
-
-	// divider is the horizontal line printed after the banner.
-	divider = "  ─────────────────────────────────────────────────────"
-
-	// inputPrompt is the cursor shown when waiting for user input in selection menus.
-	inputPrompt = "  › "
 
 	// APIEndpoint is the OpenAI Chat Completions endpoint.
 	APIEndpoint = "https://api.openai.com/v1/chat/completions"
@@ -30,9 +23,27 @@ const (
 	// DefaultMaxTokens limits the length of each API response.
 	DefaultMaxTokens = 500
 
-	// DefaultMaxQuestions is the maximum number of interview questions before forcing recommendations.
+	// DefaultMaxQuestions is the maximum number of interview questions before nudging the AI.
 	DefaultMaxQuestions = 5
 
-	// RecommendationMarker is the exact string the AI must start its recommendation response with.
+	// RecommendationMarker is the sentinel string the AI must begin its final response with.
 	RecommendationMarker = "RECOMMENDATIONS:"
+
+	// --- UI ---
+
+	// botIcon is the emoji shown next to the bot name throughout the interface.
+	botIcon = "🎬"
+
+	// divider is the horizontal rule printed after the welcome banner.
+	divider = "  ─────────────────────────────────────────────────────"
+
+	// inputPrompt is the cursor displayed when prompting the user to choose an option.
+	inputPrompt = "  › "
+
+	// langChoicePrompt is shown before the language selection menu (language-neutral by design).
+	langChoicePrompt = "  Choose language / Выберите язык:"
+
+	// langOptionEN and langOptionRU are the two options in the language selection menu.
+	langOptionEN = "  1 · English"
+	langOptionRU = "  2 · Русский"
 )

@@ -7,31 +7,30 @@ import (
 	"strings"
 )
 
-// botPrefix is the fixed label printed before every bot message (including "thinking").
-// Keeping it as a constant ensures the cursor never shifts between states.
+// botPrefix is the label printed before every bot message.
+// Defined as a constant so the cursor never shifts between "thinking" and reply states.
 const botPrefix = botIcon + " CineMatch"
 
-// ui holds all user-visible strings for one language.
+// ui holds all user-visible strings for a single language.
 type ui struct {
-	// banner
+	// Welcome banner
 	bannerSub   string
 	bannerLine1 string
 	bannerLine2 string
 	bannerLine3 string
 	hint        string
-	// language selection
-	langChoice string
-	langEN     string
-	langRU     string
-	// conversation
+
+	// Conversation
 	youLabel       string
-	thinkingSuffix string // appended after botPrefix when waiting
+	thinkingSuffix string // appended to botPrefix while waiting for the API
 	goodbye        string
 	enjoy          string
-	// errors
+
+	// Error messages (used with fmt.Fprintf + %v)
 	errorConnect string
 	errorAPI     string
-	// kickstart message sent silently to the API
+
+	// Silent kickstart sent to the API to trigger the first question
 	kickstart string
 }
 
@@ -41,9 +40,6 @@ var textEN = ui{
 	bannerLine2:    "  🎭  about your mood, favourite genres and recent films —",
 	bannerLine3:    "  🍿  and find something perfect just for you.",
 	hint:           "  Type 'quit' at any time to exit.",
-	langChoice:     "  Choose language / Выберите язык:",
-	langEN:         "  1 · English",
-	langRU:         "  2 · Русский",
 	youLabel:       "You",
 	thinkingSuffix: " is thinking...",
 	goodbye:        "\n" + botPrefix + ": Have a great evening!\n",
@@ -59,9 +55,6 @@ var textRU = ui{
 	bannerLine2:    "  🎭  о настроении, любимых жанрах и последних фильмах —",
 	bannerLine3:    "  🍿  и подберу что-то идеальное именно для тебя.",
 	hint:           "  Введи 'выйти' или 'quit' в любой момент, чтобы выйти.",
-	langChoice:     "  Choose language / Выберите язык:",
-	langEN:         "  1 · English",
-	langRU:         "  2 · Русский",
 	youLabel:       "Ты",
 	thinkingSuffix: " думает...",
 	goodbye:        "\n" + botPrefix + ": Хорошего вечера!\n",
@@ -94,7 +87,7 @@ func main() {
 
 	printBanner(t)
 
-	// Kick off the conversation — send the first message so the AI asks the opening question.
+	// Send the kickstart message silently so the AI opens with the first question.
 	session.AddUserMessage(t.kickstart)
 	printThinking(t)
 	firstQuestion, err := client.Send(session.History)
@@ -106,7 +99,7 @@ func main() {
 	session.AddAssistantMessage(firstQuestion)
 	printBot(firstQuestion)
 
-	// REPL: read user input, send to API, print response, repeat until recommendations arrive.
+	// Main loop: read input → send to API → print reply → repeat until recommendations arrive.
 	for {
 		fmt.Printf("\n        %s: ", t.youLabel)
 
@@ -126,7 +119,6 @@ func main() {
 
 		session.AddUserMessage(input)
 
-		// If the AI has been asking for a while, nudge it toward recommendations.
 		if session.ShouldNudge() {
 			session.AddSystemNudge()
 		}
@@ -139,7 +131,6 @@ func main() {
 			break
 		}
 		session.AddAssistantMessage(response)
-
 		printBot(response)
 
 		if IsRecommendation(response) {
@@ -149,15 +140,14 @@ func main() {
 	}
 }
 
-// chooseLang asks the user to pick a language and returns their choice.
-// Uses textEN for the prompt since the language isn't known yet.
+// chooseLang shows a language selection menu and returns the user's choice.
+// The menu text is language-neutral by design (stored in config.go).
 func chooseLang(scanner *bufio.Scanner) Language {
-	t := textEN
 	fmt.Println()
-	fmt.Println(t.langChoice)
+	fmt.Println(langChoicePrompt)
 	fmt.Println()
-	fmt.Println(t.langEN)
-	fmt.Println(t.langRU)
+	fmt.Println(langOptionEN)
+	fmt.Println(langOptionRU)
 	fmt.Println()
 
 	for {
@@ -174,7 +164,7 @@ func chooseLang(scanner *bufio.Scanner) Language {
 	}
 }
 
-// printBanner prints the welcome header.
+// printBanner prints the welcome screen.
 func printBanner(t ui) {
 	fmt.Println()
 	fmt.Printf("  %s  CineMatch\n", botIcon)
@@ -195,30 +185,33 @@ func printBot(message string) {
 	fmt.Printf("\n%s: %s\n", botPrefix, message)
 }
 
-// printThinking prints a "thinking" line using the same fixed prefix as bot messages.
-// This prevents any horizontal shift when the response arrives.
+// printThinking shows a "thinking" indicator on the current line.
+// Uses the same botPrefix as printBot so the cursor position never shifts.
 func printThinking(t ui) {
 	fmt.Printf("\n%s%s", botPrefix, t.thinkingSuffix)
 }
 
-// clearThinking erases the thinking line so the real response can be printed in its place.
+// clearThinking erases the thinking indicator so the real response replaces it cleanly.
 func clearThinking() {
 	fmt.Print("\r\033[K")
 }
 
-// isExitCommand reports whether the input is a quit command in any supported language.
+// isExitCommand reports whether the input is a recognised quit command.
 func isExitCommand(input string) bool {
-	lower := strings.ToLower(input)
-	return lower == "quit" || lower == "exit" || lower == "q" ||
-		lower == "выход" || lower == "выйти"
+	switch strings.ToLower(input) {
+	case "quit", "exit", "q", "выход", "выйти":
+		return true
+	}
+	return false
 }
 
-// loadEnvFile reads KEY=VALUE pairs from a .env file and sets them as environment variables.
-// Lines starting with # and empty lines are ignored. Already-set variables are not overwritten.
+// loadEnvFile reads KEY=VALUE pairs from path and sets them as environment variables.
+// Lines starting with # and blank lines are ignored.
+// Variables already set in the environment are never overwritten.
 func loadEnvFile(path string) {
 	f, err := os.Open(path)
 	if err != nil {
-		return // .env is optional — no error if it doesn't exist
+		return // .env is optional
 	}
 	defer f.Close()
 
