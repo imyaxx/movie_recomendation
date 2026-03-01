@@ -1,0 +1,5 @@
+# Secret environment variables — never commit the real .env
+.env
+
+# Go build output
+cinematch
