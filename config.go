@@ -6,6 +6,15 @@ const (
 	// EnvAPIKey is the environment variable name for the OpenAI API key.
 	EnvAPIKey = "OPENAI_API_KEY"
 
+	// botIcon is the emoji displayed next to the bot name in the banner and messages.
+	botIcon = "🎬"
+
+	// divider is the horizontal line printed after the banner.
+	divider = "  ─────────────────────────────────────────────────────"
+
+	// inputPrompt is the cursor shown when waiting for user input in selection menus.
+	inputPrompt = "  › "
+
 	// APIEndpoint is the OpenAI Chat Completions endpoint.
 	APIEndpoint = "https://api.openai.com/v1/chat/completions"
 
@@ -26,7 +35,4 @@ const (
 
 	// RecommendationMarker is the exact string the AI must start its recommendation response with.
 	RecommendationMarker = "RECOMMENDATIONS:"
-
-	// KickstartMessage is the initial user message that triggers the AI to ask its first question.
-	KickstartMessage = "Hello, I'd like a movie recommendation."
 )
